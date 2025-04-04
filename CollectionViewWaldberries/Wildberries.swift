@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import SkeletonView
 
 class Wildberries: UIViewController {
     
@@ -31,6 +32,7 @@ class Wildberries: UIViewController {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .systemBackground
         cv.translatesAutoresizingMaskIntoConstraints = false
+        cv.isSkeletonable = true
         return cv
     }()
     
@@ -45,10 +47,29 @@ class Wildberries: UIViewController {
         super.viewDidLoad()
         setupNavigationBar()
         setupUI()
-        fetchProducts()
         setupCartButton()
         
-        // Добавляем наблюдатель за изменениями корзины
+        let gradient = SkeletonGradient(
+            baseColor: UIColor(red: 0.62, green: 0.1, blue: 0.41, alpha: 1),
+            secondaryColor: UIColor(red: 0.06, green: 0, blue: 0.19, alpha: 1)
+        )
+        
+        collectionView.showAnimatedGradientSkeleton(
+            usingGradient: gradient,
+            animation: SkeletonAnimationBuilder().makeSlidingAnimation(withDirection: .leftRight),
+            transition: .crossDissolve(0.75)
+            
+        )
+        
+        view.showAnimatedGradientSkeleton(
+            usingGradient: gradient,
+            animation: SkeletonAnimationBuilder().makeSlidingAnimation(withDirection: .leftRight),
+            transition: .crossDissolve(0.75)
+            )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            self.fetchProducts()
+        }
+        
         NotificationCenter.default.addObserver(self,
                                              selector: #selector(handleCartUpdate),
                                              name: .cartDidUpdate,
@@ -69,7 +90,7 @@ class Wildberries: UIViewController {
         if #available(iOS 13.0, *) {
             let appearance = UINavigationBarAppearance()
             appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = #colorLiteral(red: 0.06274510175, green: 0, blue: 0.1921568662, alpha: 1)
+            appearance.backgroundColor = #colorLiteral(red: 0.09019608051, green: 0, blue: 0.3019607961, alpha: 1)
             appearance.titleTextAttributes = attributes
             appearance.shadowColor = .clear
             
@@ -97,11 +118,12 @@ class Wildberries: UIViewController {
         collectionView.backgroundColor = #colorLiteral(red: 0.06274510175, green: 0, blue: 0.1921568662, alpha: 1)
         activityIndicator.color = .white
         
-        collectionView.delegate = self
-        collectionView.dataSource = self
         collectionView.register(ProductCell.self, forCellWithReuseIdentifier: ProductCell.reuseId)
+        collectionView.isSkeletonable = true
+        view.isSkeletonable = true
+        collectionView.dataSource = self
+        collectionView.delegate = self
         
-        // ACTIVITY top
         let refreshControl = UIRefreshControl()
         refreshControl.addTarget(self, action: #selector(refreshData), for: .valueChanged)
         refreshControl.tintColor = .white
@@ -140,7 +162,6 @@ class Wildberries: UIViewController {
     
     @objc private func handleCartUpdate() {
         updateCartBadge()
-        // Обновляем все видимые ячейки
         collectionView.visibleCells.forEach { cell in
             if let productCell = cell as? ProductCell {
                 productCell.updateBuyButton()
@@ -169,6 +190,12 @@ class Wildberries: UIViewController {
                 
                 if let products = products {
                     self.products = Array(products.shuffled().prefix(Int.random(in: 5...30)))
+                    
+                    self.view.stopSkeletonAnimation()
+                    self.view.hideSkeleton(reloadDataAfter: true, transition: .crossDissolve(0.9))
+                    
+                    self.collectionView.stopSkeletonAnimation()
+                    self.collectionView.hideSkeleton(reloadDataAfter: true, transition: .crossDissolve(0.9))
                     
                     UIView.transition(with: self.collectionView,
                                     duration: 0.3,
@@ -225,6 +252,16 @@ class Wildberries: UIViewController {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+}
+
+extension Wildberries: SkeletonCollectionViewDataSource {
+    func collectionSkeletonView(_ skeletonView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return 10 // Количество ячеек-скелетонов
+    }
+    
+    func collectionSkeletonView(_ skeletonView: UICollectionView, cellIdentifierForItemAt indexPath: IndexPath) -> ReusableCellIdentifier {
+        return ProductCell.reuseId
     }
 }
 

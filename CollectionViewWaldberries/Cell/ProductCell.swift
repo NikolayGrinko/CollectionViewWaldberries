@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import SkeletonView
 
 // MARK: - Protocol
 protocol ProductCellDelegate: AnyObject {
@@ -90,6 +91,11 @@ class ProductCell: UICollectionViewCell {
     
     override init(frame: CGRect) {
         super.init(frame: frame)
+        isSkeletonable = true
+        contentView.isSkeletonable = true
+        
+        // CHANGE: Настраиваем базовые параметры скелетона
+        contentView.skeletonCornerRadius = 8
         setupUI()
     }
     
@@ -106,6 +112,15 @@ class ProductCell: UICollectionViewCell {
         contentView.layer.shadowOpacity = 0.1
         
         isUserInteractionEnabled = true
+        
+        // CHANGE: Настраиваем скелетон для всех элементов
+        [imageCollectionView, titleLabel, priceLabel, categoty, buyButton].forEach {
+            $0.isSkeletonable = true
+            if let view = $0 as? UILabel {
+                view.linesCornerRadius = 8
+                view.skeletonTextLineHeight = .fixed(20)
+            }
+        }
         
         contentView.addSubview(imageCollectionView)
         contentView.addSubview(pageControl)
